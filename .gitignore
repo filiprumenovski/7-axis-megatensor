@@ -1,0 +1,30 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# Data & outputs (reproducible via just download / just canon)
+data/
+/megatensor/
+figures/
+exports/
+.cache/
+
+# Env
+.env
+.env.local
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Pride-ingest vendored clone (install via pip/git dep)
+vendor/

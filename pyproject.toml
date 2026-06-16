@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fehl-megatensor"
+version = "0.1.0"
+description = "7-axis O-GlcNAc Site Event Tensor (SET) Megatensor — UROP (Fehl lab, WSU)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Filip Rumenovski" }]
+dependencies = [
+  "httpx>=0.27,<1.0",
+  "numpy>=2.0,<3.0",
+  "polars>=1.8,<2.0",
+  "pyarrow>=17,<21",
+  "pydantic>=2.8,<3.0",
+  "structlog>=24.4,<26.0",
+  "typer>=0.12,<1.0",
+  "xxhash>=3.4,<4.0",
+]
+
+[project.optional-dependencies]
+enrich = [
+  "gseapy>=1.1,<2.0",
+  "metapredict>=3.0,<4.0",
+  "freesasa>=2.2,<3.0",
+]
+pride = [
+  "pride-ingest @ git+https://github.com/filiprumenovski/pride-ingest.git",
+]
+dev = [
+  "pytest>=8.3,<9.0",
+  "ruff>=0.8,<1.0",
+]
+
+[project.scripts]
+megatensor = "megatensor.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

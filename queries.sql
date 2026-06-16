@@ -1,0 +1,5 @@
+-- §11.4 live query demo (run from repo root after canon/assemble)
+-- Headline: one site, every source that observed it
+-- SELECT protein_acc, residue_pos, residue_aa, dataset_id, condition_token, instrument_token, metric_name, metric_value
+-- FROM megatensor
+-- WHERE protein_acc = 'P11277' AND residue_pos = 1936 AND residue_aa = 'S';
