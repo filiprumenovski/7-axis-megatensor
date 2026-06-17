@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import polars as pl
 
 from megatensor.hash_utils import hash_u64
-from megatensor.paths import METRICS, REGISTRY, SETS
+from megatensor.store import CANON_STORE, TensorStore
 
 
 def assign_set_uid(df: pl.DataFrame) -> pl.DataFrame:
@@ -41,9 +39,11 @@ def write_partition(
     coords: pl.DataFrame,
     metrics: pl.DataFrame,
     dataset_id: str,
+    *,
+    store: TensorStore = CANON_STORE,
 ) -> None:
-    coord_path = SETS / f"dataset_id={dataset_id}"
-    metric_path = METRICS / f"dataset_id={dataset_id}"
+    coord_path = store.sets / f"dataset_id={dataset_id}"
+    metric_path = store.metrics / f"dataset_id={dataset_id}"
     coord_path.mkdir(parents=True, exist_ok=True)
     metric_path.mkdir(parents=True, exist_ok=True)
 
@@ -69,11 +69,16 @@ def write_partition(
         "metric_unit",
         "qc_flags",
         "dataset_id",
-    ).write_parquet(metric_path / "part.parquet")
+    ).unique(subset=["set_uid", "metric_name"], keep="first").write_parquet(metric_path / "part.parquet")
 
 
-def write_registry(identity_dim: pl.DataFrame, dims: dict[str, pl.DataFrame]) -> None:
-    REGISTRY.mkdir(parents=True, exist_ok=True)
-    identity_dim.write_parquet(REGISTRY / "identity_dim.parquet")
+def write_registry(
+    identity_dim: pl.DataFrame,
+    dims: dict[str, pl.DataFrame],
+    *,
+    store: TensorStore = CANON_STORE,
+) -> None:
+    store.registry.mkdir(parents=True, exist_ok=True)
+    identity_dim.write_parquet(store.registry / "identity_dim.parquet")
     for name, table in dims.items():
-        table.write_parquet(REGISTRY / f"{name}.parquet")
+        table.write_parquet(store.registry / f"{name}.parquet")

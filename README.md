@@ -4,7 +4,8 @@
 
 UROP project (Filip Rumenovski / Dr. Charlie Fehl, WSU). Sparse, append-only Site Event Tensors (SETs) unioned into a Megatensor queryable via DuckDB.
 
-Build doctrine: [`FEHL_MEGATENSOR_BUILD.md`](FEHL_MEGATENSOR_BUILD.md).
+Build doctrine: [`FEHL_MEGATENSOR_BUILD.md`](FEHL_MEGATENSOR_BUILD.md).  
+Figure style: [`FIGURES.md`](FIGURES.md). Preprint draft: [`biorxiv.md`](biorxiv.md).
 
 ## Quick start
 
@@ -12,6 +13,15 @@ Build doctrine: [`FEHL_MEGATENSOR_BUILD.md`](FEHL_MEGATENSOR_BUILD.md).
 just setup      # venv + pip install -e .
 just download   # bulk CSV: O-GlcNAc DB (MCW) + O-GlcNAcAtlas Dataset-I/II
 just canon      # Phase 0: canon adapters -> observations -> SETs
+pip install -e ".[pride]"   # optional: live re-ingest only
+just unpack-pride           # once: unpack pride_snapshot_parquets_*.tar.gz
+just pride-discover         # query local snapshot -> glyco candidates + ranked picks
+just pride-download         # Aspera pull of curated result tables
+just pride-tensorize        # Phase 3: PRIDE -> isolated experimental tensor
+just union && just analyze && just analysis-figures
+just enrich && just export && just biorxiv   # preprint bundle
+just publish                               # all of the above
+duckdb < queries/queries.sql
 ```
 
 ## Data layout

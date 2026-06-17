@@ -16,6 +16,9 @@ figures/
 exports/
 .cache/
 
+# Large PRIDE snapshot drop (unpack with scripts/unpack_pride_snapshot.sh)
+pride_snapshot_parquets_*.tar.gz
+
 # Env
 .env
 .env.local

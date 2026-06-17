@@ -11,7 +11,13 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Filip Rumenovski" }]
 dependencies = [
+  "duckdb>=1.1,<2.0",
+  "fastexcel>=0.11,<0.15",
   "httpx>=0.27,<1.0",
+  "matplotlib>=3.8,<4.0",
+  "seaborn>=0.13,<1.0",
+  "adjustText>=1.0,<2.0",
+  "cmcrameri>=1.7,<2.0",
   "numpy>=2.0,<3.0",
   "polars>=1.8,<2.0",
   "pyarrow>=17,<21",
@@ -40,6 +46,9 @@ megatensor = "megatensor.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"megatensor.viz" = ["style/*.mplstyle"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

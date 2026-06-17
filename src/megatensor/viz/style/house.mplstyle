@@ -1,0 +1,37 @@
+# FEHL Megatensor house style — see FIGURES.md §2
+
+figure.figsize      : 3.5, 2.6
+figure.dpi          : 150
+savefig.dpi         : 600
+savefig.bbox        : tight
+savefig.facecolor   : white
+
+font.family         : sans-serif
+font.size           : 8
+axes.titlesize      : 8
+axes.titleweight    : regular
+axes.labelsize      : 8
+xtick.labelsize     : 7
+ytick.labelsize     : 7
+legend.fontsize     : 7
+
+axes.spines.top     : False
+axes.spines.right   : False
+axes.linewidth      : 0.8
+xtick.direction     : in
+ytick.direction     : in
+xtick.minor.visible : True
+ytick.minor.visible : True
+xtick.major.size    : 3.0
+xtick.major.width   : 0.8
+xtick.minor.size    : 1.8
+ytick.major.size    : 3.0
+ytick.major.width   : 0.8
+
+axes.grid           : False
+grid.linewidth      : 0.5
+grid.alpha          : 0.3
+
+legend.frameon      : False
+
+figure.constrained_layout.use : True
