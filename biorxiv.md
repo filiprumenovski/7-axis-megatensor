@@ -52,7 +52,7 @@ PRIDE picks prioritized engine, instrument, and geography heterogeneity; only de
 
 ### Software
 
-Python 3.11, Polars, DuckDB. Pipeline: `megatensor canon` → `pride-tensorize` → `union` → `analyze` → `enrich` → `export`. Code: [repository].
+Python 3.11, Polars, DuckDB. Pipeline: `megatensor canon` → `pride-tensorize` → `union` → `analyze` → `enrich` → `export`. Code: <https://github.com/filiprumenovski/7-axis-megatensor>.
 
 ### Analyses
 
