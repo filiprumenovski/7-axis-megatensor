@@ -1,7 +1,7 @@
 # 7-Axis Megatensor: Autonomous Build Doctrine
 
 **Deliverable:** UROP project, "Toward Interoperable O-GlcNAc Proteomics: A Tiered 7-Axis Megatensor Model" (Filip Rumenovski / Dr. Charlie Fehl, WSU).
-**Mode:** autonomous build with sparse human checkpoints. The agent runs the loop unsupervised between checkpoints and only stops at the gates in §12.
+**Execution Model:** Phased batch build with validation checkpoints.
 **Scope guard:** machine learning is **out of scope for this run**. Produce ML-*ready* exports only (tensor shapes, feature matrices). Do not train, fit, or evaluate any model. The hook stays open for a later phase.
 **Style:** dense, directive, reproducible. Everything is Parquet, append-only, sparse. Never densify the full tensor.
 
@@ -354,9 +354,9 @@ A short `queries.sql` run at the bench. Required headline query: same O-GlcNAc s
 
 ---
 
-## 12. Run of show (autonomous loop + checkpoints)
+## 12. Pipeline Execution Stages and Checkpoints
 
-Run autonomously between checkpoints. Stop and ping Filip only at these gates.
+The pipeline executes through sequential phases with validation gates:
 
 ```
 Phase 0  Canon spine
@@ -366,7 +366,7 @@ Phase 0  Canon spine
 
 Phase 1  PRIDE discovery
   - snapshot metadata via pride-ingest; run glyco discovery query; rank by engine/instrument/country spread
-  >> CHECKPOINT 1: present the 4-5 candidate PXDs + their spread. FILIP CHOOSES THE FIVE. Do not download before approval.
+  >> CHECKPOINT 1: candidate PXDs evaluated across engine, instrument, and geographic spread before downloading.
 
 Phase 2  PRIDE ingestion
   - download chosen result tables; build adapters ONLY for the engines those picks use; parse -> observation rows
@@ -383,7 +383,7 @@ Phase 4  Enrichment + finalize
 Phase X  ML  ::  OUT OF SCOPE THIS RUN. Do not implement. Leave the export hooks (11.5) in place.
 ```
 
-Sequencing rationale: canon first because everything hangs off it and a canon-only build is whole. PRIDE second, parallelizable, degrades gracefully if it slips. Enrichment third (garnish). A short night still lands something complete.
+Sequencing rationale: canon first because everything hangs off it and a canon-only build is whole. PRIDE second, parallelizable, degrades gracefully if it slips. Enrichment third (garnish). This modular sequencing ensures each phase produces a standalone, validated dataset.
 
 ---
 
@@ -392,7 +392,7 @@ Sequencing rationale: canon first because everything hangs off it and a canon-on
 1. **Do not re-search raw MS files.** Ingest deposited result tables only.
 2. **Adapter coverage follows the picks.** Build no parser for an engine you did not pull.
 3. **Localization confidence is not comparable across sources.** Store `loc_score` + `loc_method` together; never unify into one number. FragPipe (PTM-Shepherd), MaxQuant (loc prob), PD (ptmRS), DIA-NN, and the curated DBs all mean different things by "confidence."
-4. **Do not barf out every API.** Two clean enrichments over six flaky ones. Local-first. Cap external calls; only enrich identities in the MT.
+4. **Limit external network dependencies.** Two clean, cached enrichments over multiple brittle API calls. Prefer local-first cached resources. Cap external requests and only enrich identities present in the Megatensor.
 5. **Never densify the full tensor.** Sparse Parquet + DuckDB view throughout. Dense only for the small explicit export matrices in 11.5.
 6. **No ML this run.**
 7. **Provenance axis carries instrument/country/software/PXD as real values.** That is the headline; do not bury it as metadata.

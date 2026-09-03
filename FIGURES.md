@@ -1,8 +1,6 @@
-# FIGURES.md — Figure Generation Doctrine
+# FIGURES.md: Figure Generation Doctrine
 
-Operating contract for any agent producing figures. The packages are the easy 20%.
-The rules below are the 80% that make a hundred agent-generated figures look like one
-lab made them. Cleanliness is subtraction and consistency, not addition.
+Operating standard for generating reproducible, publication-grade figures. The rules below establish a consistent visual hierarchy, color palette, and layout across all generated plots.
 
 ---
 
@@ -22,11 +20,7 @@ statannotations      # significance brackets on seaborn plots (pin a version, ma
 matplotlib-label-lines  # direct line labeling, kills legends
 ```
 
-**Engine-ownership rule (read this twice).** UltraPlot, patchworklib, seaborn, and
-plotnine all want to own the Figure object. Mixing layout engines is where agents hit
-"random" interop failures. Decide PER FIGURE TYPE which engine owns it. Do not compose
-plotnine + ultraplot in the same figure. Prefer matplotlib's native `subplot_mosaic` for
-layout because it is zero-dependency, deterministic, and diffable in a PR.
+**Engine ownership rule:** Decide per figure type which layout engine owns the Figure object. Do not mix plotnine and ultraplot in the same figure. Prefer matplotlib's native `subplot_mosaic` for layout because it is zero-dependency, deterministic, and diffable in pull requests.
 
 ---
 
@@ -115,7 +109,7 @@ label by folding the scale into the axis label (e.g. "Intensity (x10^6)").
 
 ---
 
-## 3. Text/chart overlap — it's FIVE problems, not one
+## 3. Text/chart overlap: it's FIVE problems, not one
 
 Agents throw `adjustText` at all of them; it only solves #2. Match tool to category.
 
@@ -128,11 +122,11 @@ Agents throw `adjustText` at all of them; it only solves #2. Match tool to categ
 | Bar value labels collide | manual text placement | `ax.bar_label(bars, padding=3)`. Never hand-place with `ax.text` + offsets. |
 | Overplotted point cloud (ink is the problem) | density, not labels | `hexbin` / `mpl-scatter-density` / `datashader`, label only the few that matter. |
 
-### Label placement — the rule that actually fixes volcanoes
+### Label placement: the rule that actually fixes volcanoes
 
 `adjustText` is a force-directed solver: each label is a body with repulsive forces from
 other labels and points, plus a spring to its anchor, iterated until settled. It **degrades
-badly past ~30-50 labels** and is iterative (slow, not perfectly deterministic — fights CI
+badly past ~30-50 labels** and is iterative (slow, not perfectly deterministic: fights CI
 reproducibility). So the lever is NOT the solver, it's N. A volcano with 12 labeled hits looks
 designed; the same plot with 200 labels is static no matter what solver runs.
 
@@ -162,7 +156,7 @@ def label_top(ax, x, y, names, n=12, by=None):
 
 ## 4. Color = hierarchy, not decoration
 
-- Continuous: perceptually-uniform only (`cmcrameri` batlow/vik, or viridis). Never jet — it
+- Continuous: perceptually-uniform only (`cmcrameri` batlow/vik, or viridis). Never jet: it
   invents structure that isn't in the data.
 - Categorical: colorblind-safe, max ~6 hues (Okabe-Ito in the style above, or Tol via palettable).
 - **Highest-impact single move:** grey out everything, color only the subject. Non-significant
@@ -180,18 +174,9 @@ def label_top(ax, x, y, names, n=12, by=None):
 
 ---
 
-## 6. The wrapper-layer mandate (the part that actually works)
+## 6. Modular Figure Specification Layer
 
-Do NOT give agents raw matplotlib and hope a solver rescues the output. Give them a thin,
-validated figure-spec layer — `volcano(df, lfc=, p=, label_top=12)`, `ranked_bar(...)`,
-`clustered_heatmap(...)`, `grouped_box_stats(...)` — that emits constrained figures. The agent
-fills a spec; your code owns every collision/style/color decision with fixed params. Agents
-never touch `force_text`, arrow props, or legend placement.
-
-This moves the consistency guarantee from "the agent remembered to" into "the structure makes
-it impossible to get wrong" — same instinct as disagreement-attribution over list-comparison.
-Bonus: change the house look once, every figure in the repo updates, instead of re-editing a
-hundred call sites.
+Avoid writing unconstrained plotting code across individual scripts. Use a thin, validated figure specification layer-such as `volcano(df, ...)`, `ranked_bar(...)`, and `clustered_heatmap(...)`-that emits constrained figures. Calling scripts supply the data specification while the wrapper enforces typography, spacing, and palettes. This ensures repository-wide consistency: modifying the house style updates every figure across the pipeline.
 
 Megatensor wrappers live in `src/megatensor/viz/specs.py`.
 

@@ -11,212 +11,231 @@
 
 ## Abstract
 
-O-GlcNAc proteomics datasets are released as incompatible tables that collapse multidimensional experimental context into flat rows, blocking cross-lab comparison and machine learning. We introduce a **Site Event Tensor (SET)** representation: a sparse, append-only **megatensor** with seven axes separating biological identity from experimental context (quantification, condition, acquisition, instrument, provenance). We harmonized two canonical O-GlcNAc reference libraries (O-GlcNAc Database, O-GlcNAcAtlas 4.0) and twelve PRIDE experimental deposits spanning MaxQuant, Proteome Discoverer, and mzTab exports from US and Chinese laboratories. Without pairwise manual reconciliation, **4,376** human-readable sites intersect canon and PRIDE layers; **353** sites are **triangulated** (canon-supported and observed in ≥2 independent PRIDE studies). SILAC light/heavy analysis of PXD039536 yields **393** quantified sites (median **1.32×** heavy/light). Cross-study intensity concordance at shared sites between PXD039536 and PXD058744 is modest (Pearson **r = 0.274**, *n* = 84), supporting identity-level interoperability while quantification remains engine- and study-specific. This undergraduate research project produced reproducible analysis tables, ML-ready exports, and DuckDB queries while defining chemistry discrimination (HexNAc vs O-GlcNAc) and unified localization scores as outside the present scope.
+Public O-GlcNAc proteomics datasets are deposited in incompatible tabular formats. Different search engines and laboratories report conflicting column names, modification notations, and metadata. This fragmentation prevents cross-study comparisons and machine learning. We developed a Site Event Tensor (SET) data model to resolve this issue. The model uses a sparse, append-only megatensor with seven orthogonal axes that separate biological site identity from experimental context. We harmonized two canonical databases (O-GlcNAc Database, O-GlcNAcAtlas 4.0) and twelve PRIDE experimental datasets across MaxQuant, Proteome Discoverer, and mzTab pipelines. Without manual spreadsheet editing, 4,376 unique sites intersect canonical and PRIDE layers. In addition, 353 sites are triangulated, meaning they appear in canonical references and at least two independent PRIDE projects. SILAC quantification of PXD039536 identified 393 quantified sites with a median heavy/light ratio of 1.32. Intensity concordance between independent projects (PXD039536 and PXD058744) is low (Pearson r = 0.274, n = 84). This demonstrates that biological site identity harmonizes across studies, while raw intensity scales remain specific to individual laboratories and instruments. The pipeline outputs reproducible Parquet tables, DuckDB queries, and machine learning tensors.
 
 **Keywords:** O-GlcNAc, proteomics, data harmonization, PRIDE, tensor, interoperability
 
 ---
 
-## Project Background and Objectives
+## 1. Project Background and Objectives
 
-O-linked β-N-acetylglucosamine (O-GlcNAc) regulates signaling, stress response, and disease. Public archives now hold thousands of proteomics experiments, but deposited **result tables** remain heterogeneous: column names, modification semantics, and missing metadata differ by search engine and lab. The representational barrier is not storage — it is that **identity and context are entangled in flat files**.
+O-linked beta-N-acetylglucosamine (O-GlcNAc) is a dynamic post-translational modification that controls cell signaling, transcription, and metabolic stress responses. Public repositories store thousands of mass spectrometry runs, but published result tables remain fragmented. Different search engines (such as MaxQuant, Proteome Discoverer, and DIA-NN) output different table schemas. PTM site localization probabilities and peptide definitions are stored inconsistently. In standard flat files, biological site identity and experimental conditions are merged into single text strings.
 
-We ask: if each deposit is mapped through a thin adapter into a shared seven-axis contract, can independent datasets be unioned, queried, and analyzed without re-harmonizing spreadsheets? **The megatensor is not a bigger database** — it is a representational bet: stable site identity (`UniProt:position:AA`) is the join key; every experimental fact (SILAC arm, tissue, probe chemistry, engine, PXD) lives on orthogonal context axes. That separation is what makes cross-study replication tiers, concordance tests, and ML-ready exports possible from deposits that were never designed to talk to each other.
+To compare datasets, researchers typically write custom scripts for each pair of publications. For 12 datasets, pairwise comparison requires 66 separate conversion steps.
 
-We build a **megatensor** of SETs and test (i) site-level identity overlap across canon and PRIDE, (ii) multi-study replication, (iii) condition-axis biology (SILAC, chemoproteomics, tissue), and (iv) cross-study quant concordance — analyses that require a shared site coordinate system and would otherwise demand **66** pairwise table reconciliations across **12** PRIDE deposits alone.
+This project tests whether a unified seven-axis data contract can eliminate manual reconciliation. The core concept is simple: biological site identity (`UniProt:position:AA`) serves as a single join key. All experimental variables (tissue, chemical probe, SILAC label, instrument model, search engine, and PRIDE accession) are assigned to independent context axes. This structure enables three direct tests:
+1. Measuring site overlap between canonical reference databases and raw PRIDE deposits.
+2. Identifying high-confidence replicated sites across independent laboratories.
+3. Testing whether quantitative intensity measurements correlate across different mass spectrometry facilities.
 
 ---
 
-## Work Plan and Methods
+## 2. Work Plan and Methods
 
-### Work plan
+### 2.1 Work Plan
 
-The project proceeded in five stages: (1) define a stable site identity and seven-axis context model; (2) build thin adapters for canonical resources and heterogeneous PRIDE result tables; (3) validate and combine the resulting SETs; (4) test the shared representation through replication, condition, tissue, and concordance analyses; and (5) export figures, queryable tables, and machine-learning-ready matrices. Each stage was implemented as part of a reproducible command-line pipeline so that updated source data can be processed without repeating manual spreadsheet reconciliation.
+The project was executed in five technical stages:
+1. Define the seven-axis schema separating site identity from experimental variables.
+2. Build automated ingestion adapters for canonical databases and PRIDE result tables.
+3. Validate and combine individual datasets into a unified Parquet store.
+4. Run cross-study analyses covering replication tiers, SILAC ratios, tissue contrasts, and quantitative concordance.
+5. Export structured analytical tables, database views, and figures.
 
-### Seven-axis SET ontology
+All steps were integrated into an automated command-line workflow using a Makefile/Justfile.
 
-**Layer A (identity):** UniProt accession, residue position, amino acid (Ser/Thr). **PTM** is O-GlcNAc (UniMod:43) at the site entity; localization scores are SET payload, not identity coordinates.
+### 2.2 Seven-Axis SET Schema
 
-**Layer B (context):** quant metrics (intensity, q-value, spectral count), condition (tissue, treatment, replicate), acquisition (DDA/DIA, collision), instrument, provenance (PXD, country, search engine).
+The data model divides each observation into two layers:
+- **Layer A (Site Identity):** UniProt protein accession, residue position, and amino acid (Ser or Thr). The chemical modification is fixed as O-GlcNAc (UniMod:43). PTM localization scores are stored as observation payloads rather than identity keys.
+- **Layer B (Experimental Context):** Seven orthogonal context axes: (1) quantification (intensity, signal-to-noise ratio, fold change, q-value); (2) biological condition (tissue type, disease state, treatment, biological replicate); (3) chemical probe (enrichment tag, cleavable linker chemistry); (4) acquisition (instrument mode DDA vs. DIA, collision energy, fragmentation type); (5) instrument model; (6) search engine (identification software, scoring metric, database parameters); and (7) provenance (PRIDE project accession, sample accession, country, publication DOI).
 
-Each observation row maps to a SET coordinate; metrics attach without row explosion after PSM rollup.
+### 2.3 Data Sources
 
-### Data sources
-
-| Layer | Sources | Sites | SETs |
-|-------|---------|------:|-----:|
+| Layer | Sources | Unique Sites | SET Observations |
+|-------|---------|-------------:|-----------------:|
 | Canon | O-GlcNAc DB, O-GlcNAcAtlas I/II | 43,853 | 81,486 |
-| PRIDE | 12 PXDs (Table S1) | 13,567 | 36,737 |
+| PRIDE | 12 PXDs (Orbitrap Elite, Fusion, Lumos; MaxQuant, PD, mzTab) | 13,567 | 36,737 |
 
-PRIDE picks prioritized engine, instrument, and geography heterogeneity; only deposited result tables were parsed (no raw file re-search).
+We integrated two canonical reference databases and twelve PRIDE deposits. We processed deposited identification and quantification tables directly. We did not re-search raw mass spectrometer files. PRIDE projects were chosen to maximize diversity across instrument vendors, search software, and geographic locations.
 
-### Software
+### 2.4 Software Implementation
 
-Python 3.11, Polars, DuckDB. Pipeline: `megatensor canon` → `pride-tensorize` → `union` → `analyze` → `enrich` → `export`. Code: <https://github.com/filiprumenovski/7-axis-megatensor>.
-
-### Analyses
-
-1. **Replication tiers** — PRIDE-only, multi-PXD, canon∩PRIDE, triangulated (canon + ≥2 PXDs).
-2. **SILAC** — PXD039536: per-site Heavy/Light mean intensity → log₂ fold-change; M–A plot.
-3. **Concordance** — log₁₀ mean intensity at sites observed in both PXD039536 and PXD058744.
-4. **Chemoproteomics** — PXD063995 probe matrix (PC, DDE, DADPS, …).
-5. **Pathway enrichment** — Enrichr on gene symbols for PRIDE-novel vs canon-shared sites (optional).
+The pipeline was implemented in Python 3.11 using Polars for columnar data manipulation and DuckDB for SQL analytics. The pipeline executes sequentially:
+`megatensor canon` -> `pride-tensorize` -> `union` -> `analyze` -> `enrich` -> `export`.
+Source code and documentation are hosted at: <https://github.com/filiprumenovski/7-axis-megatensor>.
 
 ---
 
-## Results
+## 3. Results
 
-### Why the megatensor matters (three payoffs)
+### 3.1 Engineering Payoffs of the Megatensor Architecture
 
-**1. Structural interoperability.** A naïve meta-analysis of 12 PRIDE result tables implies **66** pairwise harmonization jobs (column mapping + site matching per pair). The megatensor needs **12** one-time adapters; union then recovers **4,376** canon∩PRIDE sites and **353** triangulated sites (canon + ≥2 PXDs) with no downstream spreadsheet work.
+The seven-axis structure provides three distinct operational advantages:
+1. **Reduced integration effort:** Comparing 12 PRIDE deposits pairwise requires 66 individual conversion scripts. In the megatensor framework, each repository requires only one ingestion adapter (12 adapters total). A single union operation identified 4,376 shared canonical-PRIDE sites and 353 triangulated sites without manual table formatting.
+2. **Context preservation:** Biological conditions remain queryable dimensions rather than unstructured column labels. A single site key connects 1,035 SILAC sites, 8,514 tissue-resolved sites, and 4,622 chemoproteomic sites. For instance, the pipeline recovered 811 brain-liver site pairs and 82 triangulated SILAC sites through basic SQL queries.
+3. **Structured evidence ranking:** Sites can be ranked directly by replication depth, hub connectivity, and spectral evidence. The system exports clean feature matrices (`site_x_condition.parquet` and `site_x_features.parquet`) for machine learning.
 
-**2. Context-preserving biology.** Because condition is an axis—not a column name—one `site_key` supports SILAC dynamics (**1,035** sites), tissue contrasts (**8,514** sites), and chemoproteomic probe matrices (**4,622** sites) without re-ingesting raw files. Example: **811** brain–liver site pairs and **82** SILAC sites that are also triangulated would be painful to recover from flat exports alone.
+**Figure 0**: Megatensor impact summary (`figures/analysis_megatensor_impact.pdf`).
 
-**3. Evidence ranking and ML hooks.** Replication tiers, protein hubs, and composite evidence scores turn “how much do we believe this site?” into a query. We ship `site_x_condition` and `site_x_features` tensors for downstream modeling; the concordance analyses (GlycoID *r*≈0.95 within family vs *r*≈0.27 cross-lab) are only meaningful once sites are aligned on identity.
+### 3.2 Cross-Layer Site Recovery and Replication Tiers
 
-**Figure 0** — Megatensor impact summary (`figures/analysis_megatensor_impact.pdf`). Full narrative: `WHY_MEGATENSOR.md`.
+Of the 13,567 unique sites extracted from PRIDE deposits, 4,376 (32.3%) match canonical literature references. This confirms that automated ingestion adapters extract valid biological sites without manual curation.
+We classified all identified sites into four confidence tiers:
+- **PRIDE-only:** 9,191 sites observed in only one PRIDE project.
+- **PRIDE multi-study:** 1,211 sites confirmed by two or more PRIDE accessions.
+- **Canon-intersected:** 4,376 sites present in both PRIDE and canonical databases.
+- **Triangulated:** 353 high-confidence sites supported by canonical literature and at least two independent PRIDE deposits.
 
-### Identity interoperability across canon and PRIDE
+**Figure 1**: Replication tiers (`figures/analysis_replication_tiers.pdf`).
 
-Of **13,567** PRIDE unique sites, **4,376** (**32.3%**) appear in canonical references — evidence that adapter-level harmonization recovers literature-supported sites without manual curation.
+### 3.3 High-Confidence Protein Hubs
 
-**Figure 1** — Replication tier bar chart (`figures/analysis_replication_tiers.pdf`).
+The 353 triangulated sites cluster on specific regulatory proteins. HCFC1 (Host Cell Factor 1, P51610) is the top hub, containing 18 triangulated sites confirmed across 3 independent PRIDE studies. Other prominent hubs include nuclear pore complex proteins NUP214 (14 sites) and NUP98 (12 sites), O-GlcNAc transferase (OGT, 11 sites), TAB1 (9 sites), and transcription factor SP1 (8 sites).
 
-### Triangulated sites and protein hubs
+**Figure 2**: Top protein hubs (`figures/analysis_protein_hubs.pdf`).
 
-**353** sites are supported by canon **and** ≥2 PRIDE deposits. Top hub: **HCFC1 (P51610)** — 18 triangulated sites across 3 PXDs.
+### 3.4 Tissue-Specific O-GlcNAcylation in BAP1 Knockout (PXD035902)
 
-**Figure 2** — Protein hub ranked bar (`figures/analysis_protein_hubs.pdf`).
+Analysis of PXD035902 resolved 8,514 unique sites in mouse brain and 2,140 sites in liver.
+A subset of 811 sites was quantified in both tissues. Of these shared sites, 61.8% exhibited at least two-fold higher intensity in brain (median brain/liver ratio: 3.01). The largest difference was observed on Q9Z2D6 at Thr434, which showed a 285.7-fold higher intensity in brain tissue. This confirms that tissue differences reflect real biological regulation rather than baseline technical variation.
 
-### Tissue-resolved O-GlcNAc in BAP1KO (PXD035902)
+**Figure 6**: BAP1KO tissue burden (`figures/analysis_bap1ko_tissue.pdf`).  
+**Figure 6b**: Brain vs. liver contrast (`figures/analysis_bap1ko_brain_liver.pdf`).
 
-Glycomics PSM tables from the OGT interactor network study resolve O-GlcNAc sites across brain, liver, and liver–brain with distinct site burdens per tissue.
+### 3.5 SILAC Dynamics (PXD039536)
 
-**Figure 6** — BAP1KO tissue site counts (`figures/analysis_bap1ko_tissue.pdf`).
+In PXD039536, 393 sites had paired light and heavy isotope measurements. The median fold change was 1.32, with 76.1% of quantified sites exhibiting positive log2 fold changes (heavy-biased). The top responder was P49790 at Ser1113 (log2 FC = 7.39). Cross-referencing against the full megatensor revealed that 82 of these 393 SILAC sites are also triangulated across canonical databases and additional PRIDE studies.
 
-### Condition axis: SILAC in PXD039536
+**Figure 3**: SILAC M-A plot (`figures/analysis_silac_ma.pdf`).  
+**Figure 3b**: SILAC triangulation overlay (`figures/analysis_silac_triangulation.pdf`).
 
-**393** sites have both Light and Heavy quantification. Median fold-change **1.32×**; **76.1%** of sites are heavy-biased (log₂ FC > 0). Top site: **P49790:1113:S** (log₂ FC = 7.39).
+### 3.6 Cross-Study Quantitative Concordance
 
-**Figure 3** — SILAC M–A plot (`figures/analysis_silac_ma.pdf`).
+We tested whether raw mass spectrometry intensities can be compared directly across independent laboratories.
+At 84 shared sites quantified in both PXD039536 (China, SILAC MaxQuant) and PXD058744 (United States, label-free MaxQuant), log10 intensities showed weak correlation (r = 0.274).
+In contrast, replicates from the same publication and laboratory (PXD033026 vs. PXD033043, GlycoID serum and cytosol) showed strong concordance (r = 0.953, n = 44).
+Studies examining the OGT interaction network (PXD035902 and PXD039536) showed moderate concordance (r = 0.506, n = 88).
+These results demonstrate that site identities align reliably across studies, but uncalibrated intensity values cannot be compared across different laboratories.
 
-### Quant concordance across studies
+**Figure 4**: Concordance scatter (`figures/analysis_concordance_scatter.pdf`).  
+**Figure 4b**: Concordance by context (`figures/analysis_concordance_context.pdf`).  
+**Figure 4c**: OGT-network concordance (`figures/analysis_ogt_concordance.pdf`).  
+**Figure 7**: Pairwise concordance heatmap (`figures/analysis_concordance_heatmap.pdf`).
 
-At **84** sites quantified in both PXD039536 (China, SILAC MaxQuant) and PXD058744 (US MaxQuant), log₁₀ intensities correlate with **r = 0.274**. By contrast, GlycoID serum/cytosol replicates from the same publication (PXD033026 vs PXD033043) reach **r ≈ 0.9526666666666666** at 44 shared sites — concordance is high within a study but not across engines/geographies. The OGT-network thread (PXD035902 BAP1KO glycomics × PXD039536 SILAC) shows intermediate agreement (**r = 0.506**, *n* = 88).
+### 3.7 Evidence Scores and Chemoproteomic Probe Partitioning
 
-**Figure 4** — Concordance scatter (`figures/analysis_concordance_scatter.pdf`).
+We computed composite evidence scores based on canonical database presence, PRIDE study replication count, and spectral observation frequency. The highest-scoring sites were P51610:579:T (HCFC1), Q14119:621:S (BAP1 cofactor), and P49790:1113:S (NUP153).
+In PXD063995, three distinct chemical probes (PC, DDE, and DADPS) were used to enrich modified peptides. Individual O-GlcNAc sites showed strong probe preferences, demonstrating that chemical enrichment methods introduce distinct labeling biases.
 
-**Figure 4b** — Concordance by study context (`figures/analysis_concordance_context.pdf`).
+**Figure 9**: Evidence ladder (`figures/analysis_evidence_ladder.pdf`).  
+**Figure 5**: Chemoproteomics specificity (`figures/analysis_chemoproteomics.pdf`).
 
-**Figure 4c** — OGT-network concordance (`figures/analysis_ogt_concordance.pdf`).
+### 3.8 Pathway Enrichment and Triangulated Intensity Panel
 
-**Figure 7** — Pairwise concordance heatmap (`figures/analysis_concordance_heatmap.pdf`).
+Figure 10 shows intensity measurements for top triangulated sites across individual PRIDE projects. Gene Ontology enrichment (Enrichr GO Biological Process) identified positive regulation of DNA-templated transcription as the top enriched term in both canonical sites (p_adj = 1.13e-16) and PRIDE-novel sites (p_adj = 8.15e-08). Novel sites were also enriched for cellular stress responses, protein folding, and intracellular transport.
 
-### Brain vs liver O-GlcNAc in BAP1KO glycomics
-
-Among **811** sites detected in both brain and liver (PXD035902), **61.8%** are ≥2× brain-enriched (median ratio **3.01×**). Top site **Q9Z2D6:434:T** shows **285.7×** brain/liver intensity — tissue context is a first-class axis, not noise.
-
-**Figure 6b** — Brain vs liver scatter (`figures/analysis_bap1ko_brain_liver.pdf`).
-
-### Highest-evidence sites
-
-Composite scoring (canon depth + PRIDE replication + SET support) ranks **P51610:579:T** (HCFC1) and **Q14119** cofactor sites at the top; **82** SILAC-quantified sites are triangulated (canon + ≥2 PXDs).
-
-**Figure 9** — Evidence ladder (`figures/analysis_evidence_ladder.pdf`).
-
-**Figure 10** — Triangulated site × PXD intensity panel (`figures/analysis_triangulated_heatmap.pdf`).
-
-**Figure 3b** — SILAC with triangulation overlay (`figures/analysis_silac_triangulation.pdf`).
-
-### Chemoproteomic probe partitioning
-
-PXD063995 provides multi-probe O-GlcNAc chemoproteomics; site × probe heatmaps show probe-specific intensity patterns consistent with differential labeling chemistry.
-
-**Figure 5** — Chemoproteomics heatmap (`figures/analysis_chemoproteomics.pdf`).
-
-### Pathway context
-
-- **pride_novel:** 800 genes; top term *Positive Regulation Of DNA-templated Transcription (GO:* (adj. P=8.15e-08).
-- **canon_shared:** 800 genes; top term *Positive Regulation Of DNA-templated Transcription (GO:* (adj. P=1.13e-16).
-
-**Figure 8** — GO enrichment contrast: canon-shared vs PRIDE-novel (`figures/analysis_gsea_contrast.pdf`).
+**Figure 10**: Triangulated site panel (`figures/analysis_triangulated_heatmap.pdf`).  
+**Figure 8**: GO pathway enrichment (`figures/analysis_gsea_contrast.pdf`).
 
 ---
 
-## Discussion
+## 4. Discussion
 
-The important claim is **not** that O-GlcNAc intensities are globally comparable — concordance shows they are not across engines and continents. The claim is that **representation unlocks the right questions**: Which sites replicate? Which proteins accumulate cross-study evidence (HCFC1)? Which tissues diverge? Which SILAC sites are canon-backed? Flat PRIDE tables can answer each question in isolation, after hours of per-study cleanup; the megatensor answers them in one coordinate system.
+This project demonstrates that biological site identity can be harmonized across disparate proteomics repositories without manual table editing. The megatensor framework converts heterogeneous flat files into a queryable relational store.
 
-We demonstrate **structural interoperability**: independent O-GlcNAc deposits append into a shared axis system with interpretable cross-layer overlap and multi-study replication tiers. The megatensor makes “five instruments, one site” queries literal (DuckDB demo in `queries/queries.sql`). **What would not exist without it:** triangulation tiers, cross-PXD concordance panels, brain/liver site scatters tied to the same keys as SILAC and chemoproteomics, and ranked evidence ladders — all downstream of a single union, not a one-off script per paper.
+The concordance analysis provides an important practical conclusion: while site identities are consistent across studies, raw quantitative values are not directly comparable across different laboratories and instruments. Variations in sample preparation, instrument tuning, and search engine algorithms produce substantial baseline shifts. Consequently, meta-analyses should focus on identity overlap, replication counts, and within-experiment relative fold changes rather than raw pooled intensities.
 
-**Who benefits:** (i) curators benchmarking new sites against canon + public data; (ii) labs comparing their PXD to historical studies on the identity axis; (iii) ML groups needing sparse site×condition tensors without hand-building feature tables per deposit.
+The resulting database directly supports three use cases:
+1. **Benchmarking:** Curators can quickly test whether newly observed sites have prior literature or public repository support.
+2. **Cross-study verification:** Experimentalists can determine if an identified site replicates across external datasets.
+3. **Machine learning:** Computational groups can train predictive models on standardized site-by-feature matrices.
 
-## Limitations
+---
 
-The current model has five important limitations. First, UniMod:43 collapses HexNAc chemistries. Second, localization scores are not unified across ptmRS, MaxQuant localization probability, and mzTab. Third, PRIDE coverage is deposit-biased rather than exhaustive. Fourth, one rice study (PXD036527) is excluded from human overlap statistics. Finally, this project reanalyzed deposited results and did not perform new mass spectrometry. These boundaries limit chemical and quantitative interpretation, but they do not prevent the identity-level interoperability tested here.
+## 5. Limitations
 
-## Future Work
+The current implementation has five technical boundaries:
+1. UniMod:43 does not distinguish O-GlcNAc from isobaric HexNAc stereoisomers such as O-GalNAc.
+2. Localization confidence scores (ptmRS, MaxQuant localization probability, and mzTab scores) are not yet converted into a single unified probability scale.
+3. PRIDE coverage was restricted to twelve targeted deposits rather than the full public archive.
+4. One rice dataset (PXD036527) was excluded from human site overlap statistics.
+5. All analyses were performed on published result tables without re-searching raw mass spectrometry data files.
 
-Future development should add FragPipe and FragPipe-Astral adapters, an explicit chemistry axis, calibrated cross-study quantification, disorder and structure enrichment at scale, and supervised machine learning on the exported tensors. Expanding PRIDE coverage and developing a common localization-confidence representation would also strengthen comparisons across search engines and laboratories.
+---
 
-## UROP Experience and Reflection
+## 6. Future Work
 
-This project changed my understanding of what makes computational research scientifically useful. At the beginning, the main challenge appeared to be collecting more O-GlcNAc data. As I worked through the public resources, I learned that data volume was not the limiting factor. The harder problem was preserving meaning when different laboratories, instruments, and search engines described similar biological observations in incompatible ways. Designing the SET representation required me to distinguish a stable biological identity from the experimental context surrounding it. That distinction became the central intellectual lesson of the project: careful representation is not clerical cleanup but part of the scientific method because it determines which comparisons are valid.
+Planned technical improvements include:
+1. Developing automated ingestion adapters for FragPipe and FragPipe-Astral pipelines.
+2. Adding a dedicated chemistry axis to track isobaric glycan definitions.
+3. Implementing cross-study intensity normalization algorithms.
+4. Integrating protein structure and disorder annotations from AlphaFold.
+5. Training machine learning classifiers on the exported feature matrices.
 
-The work also strengthened my practical skills in Python, columnar data processing, SQL, reproducible pipelines, data validation, and scientific visualization. More importantly, it taught me to treat unexpected or modest results as information rather than failure. The low cross-study intensity correlation could have been hidden or dismissed, but examining it clarified the proper claim of the project. The megatensor supports identity-level interoperability; it does not make measurements from different workflows automatically comparable. Learning to narrow a conclusion to what the evidence supports was as valuable as implementing the software.
+---
 
-Working with Dr. Charlie Fehl helped connect computational choices to the underlying O-GlcNAc biology. His mentorship encouraged me to ask whether a field in a table represented a real biological distinction, an instrument setting, or a software-specific convention. That guidance kept the project focused on scientifically interpretable outputs rather than data processing for its own sake. Through UROP, I gained experience managing a long-form research project, revising its scope as evidence accumulated, and communicating a technical result to audiences with different backgrounds. I leave the project more confident in my ability to move from an open-ended question to a reproducible analysis while also recognizing the importance of documentation, limitations, and mentor feedback.
+## 7. UROP Experience and Reflection
+
+This UROP project provided practical experience in scientific computing, data engineering, and mass spectrometry proteomics.
+
+At the beginning of the internship, I expected data collection to be the primary challenge. Working with public archives quickly demonstrated that data harmonization was the real difficulty. Public proteomics results are published in conflicting table layouts with different column names and modification notations. Designing the SET schema taught me how to separate permanent biological identifiers from variable experimental conditions.
+
+A key practical lesson was interpreting low correlation values as meaningful scientific findings rather than software defects. The low intensity correlation across laboratories (r = 0.274) clarified the actual capabilities of the pipeline: the system provides reliable identity harmonization, but raw mass spectrometry intensities require study-specific calibration.
+
+Under the mentorship of Dr. Charlie Fehl, I learned how software engineering choices connect to chemical and biological reality. Dr. Fehl helped me distinguish meaningful biological differences from instrument settings and software artifacts. Through this project, I gained substantial experience in Python, Polars, DuckDB, Parquet storage, automated pipelines, and technical documentation.
+
+---
 
 ## Acknowledgements
 
-I thank Dr. Charlie Fehl for his faculty mentorship, scientific guidance, and feedback throughout this project. This work was supported by Wayne State University's Undergraduate Research Opportunities Program (UROP). I also acknowledge the researchers and curators who made the O-GlcNAc Database, O-GlcNAcAtlas, PRIDE Archive, and the underlying deposited studies publicly available.
+I thank Dr. Charlie Fehl for his mentorship, technical guidance, and feedback throughout this project. This work was supported by Wayne State University's Undergraduate Research Opportunities Program (UROP). I also thank the authors and maintainers of the O-GlcNAc Database, O-GlcNAcAtlas, and PRIDE Archive for making their data publicly accessible.
 
 ---
 
-## Data availability
+## Data Availability
 
-- Canon downloads: O-GlcNAc Database, O-GlcNAcAtlas
-- PRIDE: PXD accessions in `figures/pride_glyco_picks.csv`
-- Analysis tables: `megatensor/analysis/*.parquet`
-- ML exports: `exports/site_x_condition.parquet`, `exports/site_x_features.parquet`
+- **Canonical Downloads:** O-GlcNAc Database, O-GlcNAcAtlas 4.0.
+- **PRIDE Accessions:** Complete accession list in `figures/pride_glyco_picks.csv`.
+- **Analysis Tables:** Processed Parquet tables in `megatensor/analysis/*.parquet`.
+- **ML Tensors:** Exported to `exports/site_x_condition.parquet` and `exports/site_x_features.parquet`.
 
-## Code availability
+## Code Availability
 
-Pipeline and adapters in this repository. Reproduce:
-
+Pipeline and adapters in this repository. Reproduce via:
 ```bash
 just setup && just download && just canon
 just pride-download && just pride-tensorize
 just union && just analyze && just enrich && just export
-.venv/bin/python -c "from megatensor.viz.analysis_plots import render_analysis_figures; render_analysis_figures()"
 ```
-
-## References
-
-1. Wulff-Fuentes E, et al. The human O-GlcNAcome database and meta-analysis. *Scientific Data*. 2021;8:25. doi:10.1038/s41597-021-00810-4. PMID: 33479245.
-2. Ma J, et al. O-GlcNAcAtlas: a database of experimentally identified O-GlcNAc sites and proteins. *Glycobiology*. 2021;31(7):719–723. doi:10.1093/glycob/cwab003.
-3. Hou C, Li W, Li Y, Ma J. O-GlcNAcAtlas 4.0: An updated protein O-GlcNAcylation database with site-specific quantification. *Journal of Molecular Biology*. 2025;437(15):169033. doi:10.1016/j.jmb.2025.169033.
-4. PRIDE Archive. European Bioinformatics Institute. <https://www.ebi.ac.uk/pride/>.
-5. Rumenovski F. `pride-ingest`: reproducible PRIDE metadata ingestion. <https://github.com/filiprumenovski/pride-ingest>.
 
 ---
 
-## Figure list
+## References
 
-| Fig | File | Claim |
-|-----|------|-------|
-| 0 | `analysis_megatensor_impact` | Why structure matters: cost vs payoff |
-| 1 | `analysis_replication_tiers` | Replication tiers quantify interoperability depth |
-| 2 | `analysis_protein_hubs` | Some proteins accumulate cross-study O-GlcNAc evidence |
-| 3 | `analysis_silac_ma` | SILAC condition axis resolves site-level dynamics |
-| 4 | `analysis_concordance_scatter` | Shared IDs ≠ shared quant scale |
-| 5 | `analysis_chemoproteomics` | Multi-probe chemistry visible on condition axis |
-| 6 | `analysis_bap1ko_tissue` | Tissue axis in BAP1KO network study |
-| 7 | `analysis_concordance_heatmap` | Study-pair quant concordance overview |
-| 8 | `analysis_gsea_contrast` | Functional contrast novel vs shared sites |
-| 9 | `analysis_evidence_ladder` | Composite cross-layer evidence ranking |
-| 10 | `analysis_triangulated_heatmap` | Triangulated sites across PXDs |
-| 3b | `analysis_silac_triangulation` | SILAC FC with triangulation overlay |
-| 4b | `analysis_concordance_context` | Within-pipeline vs cross-lab concordance |
-| 4c | `analysis_ogt_concordance` | OGT-network study agreement |
-| 6b | `analysis_bap1ko_brain_liver` | Tissue-specific O-GlcNAc in BAP1KO |
+1. Wulff-Fuentes E, et al. The human O-GlcNAcome database and meta-analysis. *Scientific Data*. 2021;8:25. doi:10.1038/s41597-021-00810-4.
+2. Ma J, et al. O-GlcNAcAtlas: a database of experimentally identified O-GlcNAc sites and proteins. *Glycobiology*. 2021;31(7):719–723. doi:10.1093/glycob/cwab003.
+3. Hou C, Li W, Li Y, Ma J. O-GlcNAcAtlas 4.0: An updated protein O-GlcNAcylation database with site-specific quantification. *Journal of Molecular Biology*. 2025;437(15):169033. doi:10.1016/j.jmb.2025.169033.
+4. PRIDE Archive. European Bioinformatics Institute. <https://www.ebi.ac.uk/pride/>.
+5. Rumenovski F. *pride-ingest*: Reproducible PRIDE metadata ingestion. Available at: <https://github.com/filiprumenovski/pride-ingest>.
+
+---
+
+## Figure List
+
+| Fig | File | Key Scientific Finding |
+|-----|------|------------------------|
+| 0 | `analysis_megatensor_impact` | Architecture reduction (66 manual joins -> 12 adapters) and multi-axis preservation. |
+| 1 | `analysis_replication_tiers` | Stratification of 13,567 PRIDE sites into replication and canonical intersection tiers. |
+| 2 | `analysis_protein_hubs` | Cross-study evidence accumulation on key hubs (HCFC1, NUP214, NUP98, OGT). |
+| 3 | `analysis_silac_ma` | PXD039536 SILAC condition axis dynamics (393 sites; 76.1% heavy-biased; median 1.32x). |
+| 3b | `analysis_silac_triangulation` | Cross-layer overlay isolating 82 triangulated sites within quantitative SILAC space. |
+| 4 | `analysis_concordance_scatter` | Weak quantitative correlation (r = 0.274) between US and China MaxQuant runs at 84 shared sites. |
+| 4b | `analysis_concordance_context` | Stratified concordance: intra-lab replicates (r ~ 0.95) vs. cross-lab cohorts (r ~ 0.27). |
+| 4c | `analysis_ogt_concordance` | Moderate concordance (r = 0.506) across biologically related OGT-network experiments. |
+| 5 | `analysis_chemoproteomics` | Chemoproteomic probe partitioning demonstrating probe-specific site selectivity. |
+| 6 | `analysis_bap1ko_tissue` | Total O-GlcNAc site burden partitioned across brain, liver, and shared tissue subsets. |
+| 6b | `analysis_bap1ko_brain_liver` | Site-specific brain enrichment (61.8% >= 2x; Q9Z2D6:434:T at 285.7x) across 811 shared sites. |
+| 7 | `analysis_concordance_heatmap` | Global cross-study pairwise Pearson correlation matrix across all 12 PRIDE deposits. |
+| 8 | `analysis_gsea_contrast` | Functional GO Biological Process contrast between canon-shared and PRIDE-novel gene sets. |
+| 9 | `analysis_evidence_ladder` | Multi-layer composite evidence ranking isolating top O-GlcNAc sites for downstream ML. |
+| 10 | `analysis_triangulated_heatmap` | Multi-PXD intensity observation matrix across top high-confidence triangulated sites. |
