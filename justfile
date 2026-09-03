@@ -66,7 +66,7 @@ report:
 panel:
     .venv/bin/megatensor panel
 
-# Phase 5: analysis + bioRxiv preprint
+# Phase 5: analysis + UROP final report
 analyze:
     .venv/bin/megatensor analyze
 

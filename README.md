@@ -5,7 +5,7 @@
 UROP project (Filip Rumenovski / Dr. Charlie Fehl, WSU). Sparse, append-only Site Event Tensors (SETs) unioned into a Megatensor queryable via DuckDB.
 
 Build doctrine: [`7_AXIS_MEGATENSOR_BUILD.md`](7_AXIS_MEGATENSOR_BUILD.md).
-Figure style: [`FIGURES.md`](FIGURES.md). Preprint draft: [`biorxiv.md`](biorxiv.md).
+Figure style: [`FIGURES.md`](FIGURES.md). UROP final report: [`biorxiv.md`](biorxiv.md).
 
 ## Quick start
 
@@ -19,7 +19,7 @@ just pride-discover         # query local snapshot -> glyco candidates + ranked 
 just pride-download         # Aspera pull of curated result tables
 just pride-tensorize        # Phase 3: PRIDE -> isolated experimental tensor
 just union && just analyze && just analysis-figures
-just enrich && just export && just biorxiv   # preprint bundle
+just enrich && just export && just biorxiv   # UROP report bundle
 just publish                               # all of the above
 duckdb < queries/queries.sql
 ```

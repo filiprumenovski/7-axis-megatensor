@@ -138,7 +138,7 @@ def analysis_figures() -> None:
 
 @app.command()
 def biorxiv() -> None:
-    """Write biorxiv.md preprint draft from analysis summary."""
+    """Write the UROP final report from the analysis summary."""
     from megatensor.pipeline.biorxiv import run_biorxiv
 
     path = run_biorxiv()
@@ -147,7 +147,7 @@ def biorxiv() -> None:
 
 @app.command()
 def publish() -> None:
-    """Full bioRxiv path: analyze → analysis figures → enrich → export → biorxiv."""
+    """Build the complete UROP report and supporting outputs."""
     from megatensor.pipeline.analyze import run_analyze
     from megatensor.pipeline.biorxiv import run_biorxiv
     from megatensor.pipeline.enrich import run_enrich

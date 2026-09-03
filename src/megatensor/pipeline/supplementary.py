@@ -1,4 +1,4 @@
-"""Supplementary tables for preprint."""
+"""Supplementary tables for the final report."""
 
 from __future__ import annotations
 

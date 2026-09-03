@@ -1,21 +1,23 @@
 # Toward Interoperable O-GlcNAc Proteomics: A Tiered 7-Axis Megatensor Model
 
-**Filip Rumenovski¹, Charlie Fehl¹**  
-¹ Washington State University
+**UROP Final Report**
 
-*Draft preprint — generated from reproducible pipeline outputs.*
+- **Student:** Filip Rumenovski
+- **Faculty mentor:** Dr. Charlie Fehl
+- **Department/Program:** Department of Chemistry, College of Liberal Arts and Sciences; Undergraduate Research Opportunities Program (UROP)
+- **Institution:** Wayne State University
 
 ---
 
 ## Abstract
 
-O-GlcNAc proteomics datasets are released as incompatible tables that collapse multidimensional experimental context into flat rows, blocking cross-lab comparison and machine learning. We introduce a **Site Event Tensor (SET)** representation: a sparse, append-only **megatensor** with seven axes separating biological identity from experimental context (quantification, condition, acquisition, instrument, provenance). We harmonized two canonical O-GlcNAc reference libraries (O-GlcNAc Database, O-GlcNAcAtlas 4.0) and twelve PRIDE experimental deposits spanning MaxQuant, Proteome Discoverer, and mzTab exports from US and Chinese laboratories. Without pairwise manual reconciliation, **4,376** human-readable sites intersect canon and PRIDE layers; **353** sites are **triangulated** (canon-supported and observed in ≥2 independent PRIDE studies). SILAC light/heavy analysis of PXD039536 yields **393** quantified sites (median **1.32×** heavy/light). Cross-study intensity concordance at shared sites between PXD039536 and PXD058744 is modest (Pearson **r = 0.274**, *n* = 84), supporting identity-level interoperability while quantification remains engine- and study-specific. We release analysis tables, ML-ready exports, and DuckDB queries. This is a methods-and-resource paper; chemistry discrimination (HexNAc vs O-GlcNAc) and unified localization scores are explicitly out of scope.
+O-GlcNAc proteomics datasets are released as incompatible tables that collapse multidimensional experimental context into flat rows, blocking cross-lab comparison and machine learning. We introduce a **Site Event Tensor (SET)** representation: a sparse, append-only **megatensor** with seven axes separating biological identity from experimental context (quantification, condition, acquisition, instrument, provenance). We harmonized two canonical O-GlcNAc reference libraries (O-GlcNAc Database, O-GlcNAcAtlas 4.0) and twelve PRIDE experimental deposits spanning MaxQuant, Proteome Discoverer, and mzTab exports from US and Chinese laboratories. Without pairwise manual reconciliation, **4,376** human-readable sites intersect canon and PRIDE layers; **353** sites are **triangulated** (canon-supported and observed in ≥2 independent PRIDE studies). SILAC light/heavy analysis of PXD039536 yields **393** quantified sites (median **1.32×** heavy/light). Cross-study intensity concordance at shared sites between PXD039536 and PXD058744 is modest (Pearson **r = 0.274**, *n* = 84), supporting identity-level interoperability while quantification remains engine- and study-specific. This undergraduate research project produced reproducible analysis tables, ML-ready exports, and DuckDB queries while defining chemistry discrimination (HexNAc vs O-GlcNAc) and unified localization scores as outside the present scope.
 
 **Keywords:** O-GlcNAc, proteomics, data harmonization, PRIDE, tensor, interoperability
 
 ---
 
-## Introduction
+## Project Background and Objectives
 
 O-linked β-N-acetylglucosamine (O-GlcNAc) regulates signaling, stress response, and disease. Public archives now hold thousands of proteomics experiments, but deposited **result tables** remain heterogeneous: column names, modification semantics, and missing metadata differ by search engine and lab. The representational barrier is not storage — it is that **identity and context are entangled in flat files**.
 
@@ -25,7 +27,11 @@ We build a **megatensor** of SETs and test (i) site-level identity overlap acros
 
 ---
 
-## Methods
+## Work Plan and Methods
+
+### Work plan
+
+The project proceeded in five stages: (1) define a stable site identity and seven-axis context model; (2) build thin adapters for canonical resources and heterogeneous PRIDE result tables; (3) validate and combine the resulting SETs; (4) test the shared representation through replication, condition, tissue, and concordance analyses; and (5) export figures, queryable tables, and machine-learning-ready matrices. Each stage was implemented as part of a reproducible command-line pipeline so that updated source data can be processed without repeating manual spreadsheet reconciliation.
 
 ### Seven-axis SET ontology
 
@@ -145,17 +151,33 @@ We demonstrate **structural interoperability**: independent O-GlcNAc deposits ap
 
 **Who benefits:** (i) curators benchmarking new sites against canon + public data; (ii) labs comparing their PXD to historical studies on the identity axis; (iii) ML groups needing sparse site×condition tensors without hand-building feature tables per deposit.
 
-**Limitations (explicit):** (1) UniMod:43 collapses HexNAc chemistries; (2) localization scores are not unified across ptmRS, MaxQuant loc prob, and mzTab; (3) PRIDE coverage is deposit-biased, not exhaustive; (4) one rice study (PXD036527) is excluded from human overlap stats; (5) no new mass spectrometry was performed.
+## Limitations
 
-**Future work:** FragPipe/FragPipe-Astral adapters, chemistry axis, calibrated quant harmonization, disorder/structure enrichment at scale, supervised ML on exported tensors.
+The current model has five important limitations. First, UniMod:43 collapses HexNAc chemistries. Second, localization scores are not unified across ptmRS, MaxQuant localization probability, and mzTab. Third, PRIDE coverage is deposit-biased rather than exhaustive. Fourth, one rice study (PXD036527) is excluded from human overlap statistics. Finally, this project reanalyzed deposited results and did not perform new mass spectrometry. These boundaries limit chemical and quantitative interpretation, but they do not prevent the identity-level interoperability tested here.
+
+## Future Work
+
+Future development should add FragPipe and FragPipe-Astral adapters, an explicit chemistry axis, calibrated cross-study quantification, disorder and structure enrichment at scale, and supervised machine learning on the exported tensors. Expanding PRIDE coverage and developing a common localization-confidence representation would also strengthen comparisons across search engines and laboratories.
+
+## UROP Experience and Reflection
+
+This project changed my understanding of what makes computational research scientifically useful. At the beginning, the main challenge appeared to be collecting more O-GlcNAc data. As I worked through the public resources, I learned that data volume was not the limiting factor. The harder problem was preserving meaning when different laboratories, instruments, and search engines described similar biological observations in incompatible ways. Designing the SET representation required me to distinguish a stable biological identity from the experimental context surrounding it. That distinction became the central intellectual lesson of the project: careful representation is not clerical cleanup but part of the scientific method because it determines which comparisons are valid.
+
+The work also strengthened my practical skills in Python, columnar data processing, SQL, reproducible pipelines, data validation, and scientific visualization. More importantly, it taught me to treat unexpected or modest results as information rather than failure. The low cross-study intensity correlation could have been hidden or dismissed, but examining it clarified the proper claim of the project. The megatensor supports identity-level interoperability; it does not make measurements from different workflows automatically comparable. Learning to narrow a conclusion to what the evidence supports was as valuable as implementing the software.
+
+Working with Dr. Charlie Fehl helped connect computational choices to the underlying O-GlcNAc biology. His mentorship encouraged me to ask whether a field in a table represented a real biological distinction, an instrument setting, or a software-specific convention. That guidance kept the project focused on scientifically interpretable outputs rather than data processing for its own sake. Through UROP, I gained experience managing a long-form research project, revising its scope as evidence accumulated, and communicating a technical result to audiences with different backgrounds. I leave the project more confident in my ability to move from an open-ended question to a reproducible analysis while also recognizing the importance of documentation, limitations, and mentor feedback.
+
+## Acknowledgements
+
+I thank Dr. Charlie Fehl for his faculty mentorship, scientific guidance, and feedback throughout this project. This work was supported by Wayne State University's Undergraduate Research Opportunities Program (UROP). I also acknowledge the researchers and curators who made the O-GlcNAc Database, O-GlcNAcAtlas, PRIDE Archive, and the underlying deposited studies publicly available.
 
 ---
 
 ## Data availability
 
-- Canon downloads: O-GlcNAc Database, O-GlcNAcAtlas  
-- PRIDE: PXD accessions in `figures/pride_glyco_picks.csv`  
-- Analysis tables: `megatensor/analysis/*.parquet`  
+- Canon downloads: O-GlcNAc Database, O-GlcNAcAtlas
+- PRIDE: PXD accessions in `figures/pride_glyco_picks.csv`
+- Analysis tables: `megatensor/analysis/*.parquet`
 - ML exports: `exports/site_x_condition.parquet`, `exports/site_x_features.parquet`
 
 ## Code availability
@@ -171,9 +193,11 @@ just union && just analyze && just enrich && just export
 
 ## References
 
-1. Wulff-Fuentes et al. *Sci Data* 8, 25 (2021) — O-GlcNAc Database  
-2. Ma et al. *Glycobiology* 31, 719–723 (2021); Hou et al. *J Mol Biol* (2025) — O-GlcNAcAtlas  
-3. PRIDE Archive / pride-ingest  
+1. Wulff-Fuentes E, et al. The human O-GlcNAcome database and meta-analysis. *Scientific Data*. 2021;8:25. doi:10.1038/s41597-021-00810-4. PMID: 33479245.
+2. Ma J, et al. O-GlcNAcAtlas: a database of experimentally identified O-GlcNAc sites and proteins. *Glycobiology*. 2021;31(7):719–723. doi:10.1093/glycob/cwab003.
+3. Hou C, Li W, Li Y, Ma J. O-GlcNAcAtlas 4.0: An updated protein O-GlcNAcylation database with site-specific quantification. *Journal of Molecular Biology*. 2025;437(15):169033. doi:10.1016/j.jmb.2025.169033.
+4. PRIDE Archive. European Bioinformatics Institute. <https://www.ebi.ac.uk/pride/>.
+5. Rumenovski F. `pride-ingest`: reproducible PRIDE metadata ingestion. <https://github.com/filiprumenovski/pride-ingest>.
 
 ---
 

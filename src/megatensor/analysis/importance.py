@@ -1,4 +1,4 @@
-"""Quantify why the megatensor representation matters (defense / preprint narrative)."""
+"""Quantify why the megatensor representation matters in the report."""
 
 from __future__ import annotations
 
