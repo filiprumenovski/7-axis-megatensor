@@ -76,7 +76,7 @@ def run_report() -> Path:
     human_shared = union.get("human_shared_sites", "—")
     human_pride_only = union.get("human_pride_only_sites", "—")
 
-    text = f"""# FEHL Megatensor — Technical Report
+    text = f"""# 7-Axis Megatensor — Technical Report
 
 ## Panel headline
 

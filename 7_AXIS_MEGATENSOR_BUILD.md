@@ -1,4 +1,4 @@
-# FEHL Megatensor: Autonomous Build Doctrine
+# 7-Axis Megatensor: Autonomous Build Doctrine
 
 **Deliverable:** UROP project, "Toward Interoperable O-GlcNAc Proteomics: A Tiered 7-Axis Megatensor Model" (Filip Rumenovski / Dr. Charlie Fehl, WSU).
 **Mode:** autonomous build with sparse human checkpoints. The agent runs the loop unsupervised between checkpoints and only stops at the gates in §12.
@@ -403,7 +403,7 @@ Sequencing rationale: canon first because everything hangs off it and a canon-on
 ## 14. Repo layout and one-command run
 
 ```text
-fehl-megatensor/
+7-axis-megatensor/
   pyproject.toml
   README.md
   justfile                 # or Makefile: `just all`

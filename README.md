@@ -1,10 +1,10 @@
-# FEHL Megatensor
+# 7-Axis Megatensor
 
 **Toward Interoperable O-GlcNAc Proteomics: A Tiered 7-Axis Megatensor Model**
 
 UROP project (Filip Rumenovski / Dr. Charlie Fehl, WSU). Sparse, append-only Site Event Tensors (SETs) unioned into a Megatensor queryable via DuckDB.
 
-Build doctrine: [`FEHL_MEGATENSOR_BUILD.md`](FEHL_MEGATENSOR_BUILD.md).  
+Build doctrine: [`7_AXIS_MEGATENSOR_BUILD.md`](7_AXIS_MEGATENSOR_BUILD.md).
 Figure style: [`FIGURES.md`](FIGURES.md). Preprint draft: [`biorxiv.md`](biorxiv.md).
 
 ## Quick start

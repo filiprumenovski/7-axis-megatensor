@@ -1,4 +1,4 @@
-# FEHL Megatensor — Technical Report
+# 7-Axis Megatensor — Technical Report
 
 ## Panel headline
 

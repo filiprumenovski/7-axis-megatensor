@@ -1,4 +1,4 @@
-# FEHL Megatensor — one-command runners (see FEHL_MEGATENSOR_BUILD.md §12)
+# 7-Axis Megatensor — one-command runners (see 7_AXIS_MEGATENSOR_BUILD.md §12)
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-app = typer.Typer(help="FEHL Megatensor pipeline")
+app = typer.Typer(help="7-Axis Megatensor pipeline")
 
 
 @app.command()
