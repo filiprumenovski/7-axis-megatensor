@@ -1,4 +1,4 @@
-"""Seaborn theme + adjustText label repulsion (FIGURES.md)."""
+"""Seaborn theme + adjustText label repulsion."""
 
 from __future__ import annotations
 

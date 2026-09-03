@@ -1,4 +1,4 @@
-"""Import-time figure preamble — FIGURES.md §1."""
+"""Import-time figure preamble."""
 
 from __future__ import annotations
 

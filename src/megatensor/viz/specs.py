@@ -1,4 +1,4 @@
-"""Validated figure wrappers — agents fill specs, not matplotlib knobs (FIGURES.md §6)."""
+"""Validated figure wrappers."""
 
 from __future__ import annotations
 
